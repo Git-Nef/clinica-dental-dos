@@ -1,6 +1,7 @@
 "use client"
 import { useSubmitCita } from "@/hooks/use-submit-cita"
 import type React from "react"
+import SuccessModal from '@/components/ui/SuccessModal'
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
@@ -41,7 +42,7 @@ const timeSlots = [
 
 export default function Appointment() {
   const [date, setDate] = useState<Date>()
-
+  const [showModal, setShowModal] = useState(false)
   
   const { submitCita } = useSubmitCita()
 
@@ -62,7 +63,7 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
   const res = await submitCita(datos)
 
   if (res.success) {
-    alert("¡Cita registrada exitosamente!")
+    setShowModal(true)
     form.reset()
     setDate(undefined)
   } else {
@@ -217,6 +218,7 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
           </form>
         </div>
       </div>
+      <SuccessModal isOpen={showModal} onClose={() => setShowModal(false)} />
     </section>
   )
 }
