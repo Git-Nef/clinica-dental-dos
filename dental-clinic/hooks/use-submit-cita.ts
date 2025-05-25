@@ -17,6 +17,14 @@ export const useSubmitCita = () => {
         ...datos,
         fechaCreacion: Timestamp.now(),
       })
+      await fetch('http://localhost:5001/send-email', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify(datos),
+})
+
       return { success: true }
     } catch (error) {
       console.error('Error al guardar la cita:', error)
