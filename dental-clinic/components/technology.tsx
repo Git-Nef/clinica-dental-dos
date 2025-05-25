@@ -15,7 +15,7 @@ export default function Technology() {
         <div className="grid gap-8 md:grid-cols-2 md:gap-12">
           <div className="flex items-center justify-center">
             <img
-              src="/placeholder.svg?height=400&width=600"
+              src="/img/equipo1.jpg?height=400&width=600"
               alt="Radiovisiografo para radiografías digitales"
               className="rounded-lg shadow-lg"
               width={600}
