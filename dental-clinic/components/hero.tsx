@@ -22,7 +22,7 @@ export default function Hero() {
           </div>
           <div className="flex items-center justify-center">
             <img
-              src="/placeholder.svg?height=400&width=600"
+              src="/img/principal.jpg?height=400&width=600"
               alt="Paciente sonriente"
               className="rounded-lg shadow-lg"
               width={600}

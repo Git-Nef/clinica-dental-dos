@@ -10,7 +10,7 @@ export default function About() {
         <div className="grid gap-8 md:grid-cols-2 md:gap-12">
           <div className="flex items-center justify-center">
             <img
-              src="/placeholder.svg?height=400&width=400"
+              src="/img/perfil.jpeg?height=400&width=400"
               alt="Dr. Cristobal Silva Vázquez"
               className="rounded-full shadow-lg"
               width={400}
