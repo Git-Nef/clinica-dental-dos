@@ -8,6 +8,12 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { CalendarIcon } from "lucide-react";
@@ -48,12 +54,15 @@ export default function Appointment() {
   const formRef = useRef<HTMLFormElement>(null);
 
   const [date, setDate] = useState<Date>();
+  const [mensaje, setMensaje] = useState<string | null>(null);
+  const [open, setOpen] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!date) {
-      alert("Por favor seleccione una fecha.");
+      setMensaje("Por favor seleccione una fecha.");
+      setOpen(true);
       return;
     }
 
@@ -79,16 +88,19 @@ export default function Appointment() {
       const result = await res.json();
 
       if (result.ok) {
-        alert("Cita guardada con éxito 🦷");
+        setMensaje("Cita guardada con éxito 🦷");
+        setOpen(true);
         formRef.current?.reset();
         setDate(undefined);
       } else {
-        alert("Error al guardar la cita 😵");
+        setMensaje("Error al guardar la cita 😵");
+        setOpen(true);
         console.error(result.error);
       }
     } catch (error) {
+      setMensaje("Error al conectar con el servidor 😓");
+      setOpen(true);
       console.error("Error de red:", error);
-      alert("Error al conectar con el servidor.");
     }
   };
 
@@ -269,6 +281,26 @@ export default function Appointment() {
           </form>
         </div>
       </div>
+
+      {/* Modal visual */}
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="sm:max-w-md text-center">
+          <DialogHeader>
+            <DialogTitle className="text-green-700 text-lg">
+              ✅ ¡Listo!
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-gray-700">{mensaje}</p>
+          <div className="mt-4">
+            <Button
+              onClick={() => setOpen(false)}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              Cerrar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }
