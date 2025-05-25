@@ -1,5 +1,5 @@
 "use client"
-
+import { useSubmitCita } from "@/hooks/use-submit-cita"
 import type React from "react"
 
 import { useState } from "react"
@@ -42,11 +42,34 @@ const timeSlots = [
 export default function Appointment() {
   const [date, setDate] = useState<Date>()
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    // Aquí iría la lógica para procesar la cita
-    alert("Formulario enviado. Nos pondremos en contacto pronto para confirmar su cita.")
+  
+  const { submitCita } = useSubmitCita()
+
+const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  e.preventDefault()
+  const form = e.currentTarget
+
+  const datos = {
+    nombreCompleto: (form.elements.namedItem("name") as HTMLInputElement).value,
+    telefono: (form.elements.namedItem("phone") as HTMLInputElement).value,
+    correo: (form.elements.namedItem("email") as HTMLInputElement).value,
+    tratamiento: (form.elements.namedItem("service") as HTMLSelectElement).value,
+    fecha: date ? date.toISOString().split("T")[0] : "",
+    hora: (form.elements.namedItem("time") as HTMLSelectElement).value,
+    metodoPago: (form.elements.namedItem("payment") as HTMLSelectElement).value,
   }
+
+  const res = await submitCita(datos)
+
+  if (res.success) {
+    alert("¡Cita registrada exitosamente!")
+    form.reset()
+    setDate(undefined)
+  } else {
+    alert("Error al registrar la cita. Intenta de nuevo.")
+  }
+}
+
 
   return (
     <section id="citas" className="bg-white py-16 md:py-24">
@@ -69,6 +92,7 @@ export default function Appointment() {
                 </label>
                 <input
                   id="name"
+                  name="name"
                   placeholder="Ingrese su nombre completo"
                   required
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
@@ -80,6 +104,7 @@ export default function Appointment() {
                 </label>
                 <input
                   id="phone"
+                  name="phone"
                   type="tel"
                   placeholder="Ingrese su número telefónico"
                   required
@@ -94,6 +119,7 @@ export default function Appointment() {
               </label>
               <input
                 id="email"
+                name="email"
                 type="email"
                 placeholder="Ingrese su correo electrónico"
                 required
@@ -107,6 +133,7 @@ export default function Appointment() {
               </label>
               <select
                 id="service"
+                name="service"
                 required
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
               >
@@ -154,6 +181,7 @@ export default function Appointment() {
                 </label>
                 <select
                   id="time"
+                  name="time"
                   required
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                 >
@@ -173,6 +201,7 @@ export default function Appointment() {
               </label>
               <select
                 id="payment"
+                name="payment"
                 required
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
               >
