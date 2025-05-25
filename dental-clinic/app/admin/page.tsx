@@ -1,7 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { onAuthStateChanged, signOut } from 'firebase/auth'
 import { collection, getDocs, doc, deleteDoc, updateDoc } from 'firebase/firestore'
+import { auth } from '@/lib/auth'
 import { db } from '@/lib/firebase'
 
 type Cita = {
@@ -17,7 +19,19 @@ type Cita = {
 }
 
 export default function AdminPage() {
+  const [user, setUser] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
   const [citas, setCitas] = useState<Cita[]>([])
+  const [filtro, setFiltro] = useState('')
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser)
+      setLoading(false)
+    })
+
+    return () => unsubscribe()
+  }, [])
 
   const fetchCitas = async () => {
     const querySnapshot = await getDocs(collection(db, 'citas'))
@@ -29,16 +43,14 @@ export default function AdminPage() {
   }
 
   const eliminarCita = async (id: string) => {
-    if (confirm('¿Estás seguro que quieres eliminar esta cita?')) {
+    if (confirm('¿Eliminar esta cita?')) {
       await deleteDoc(doc(db, 'citas', id))
       fetchCitas()
     }
   }
 
   const marcarAtendida = async (id: string) => {
-    await updateDoc(doc(db, 'citas', id), {
-      estado: 'atendida',
-    })
+    await updateDoc(doc(db, 'citas', id), { estado: 'atendida' })
     fetchCitas()
   }
 
@@ -46,9 +58,37 @@ export default function AdminPage() {
     fetchCitas()
   }, [])
 
+  const citasFiltradas = citas.filter((cita) =>
+    cita.nombreCompleto.toLowerCase().includes(filtro.toLowerCase()) ||
+    cita.fecha.includes(filtro)
+  )
+
+  if (loading) return <p className="p-4">Cargando...</p>
+  if (!user) {
+    if (typeof window !== 'undefined') {
+      window.location.href = '/admin/login'
+    }
+    return null
+  }
+
   return (
     <section className="p-8">
-      <h1 className="text-3xl font-bold text-blue-900 mb-6">Citas Registradas</h1>
+      <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+        <h1 className="text-3xl font-bold text-blue-900">Citas Registradas</h1>
+        <input
+          type="text"
+          placeholder="Buscar por nombre o fecha (YYYY-MM-DD)"
+          value={filtro}
+          onChange={(e) => setFiltro(e.target.value)}
+          className="border border-gray-300 p-2 rounded w-full md:w-1/3"
+        />
+        <button
+          onClick={() => signOut(auth).then(() => window.location.href = '/admin/login')}
+          className="text-red-600 hover:underline"
+        >
+          Cerrar sesión
+        </button>
+      </div>
 
       <div className="overflow-x-auto bg-white rounded shadow">
         <table className="min-w-full text-left text-sm">
@@ -66,7 +106,7 @@ export default function AdminPage() {
             </tr>
           </thead>
           <tbody>
-            {citas.map((cita) => (
+            {citasFiltradas.map((cita) => (
               <tr key={cita.id} className="border-b hover:bg-blue-50">
                 <td className="px-4 py-2">{cita.nombreCompleto}</td>
                 <td className="px-4 py-2">{cita.telefono}</td>
