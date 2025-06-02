@@ -10,6 +10,136 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
+// Componente de selector de reloj
+const ClockPicker = ({
+  value,
+  onChange,
+  onClose,
+}: { value: string; onChange: (time: string) => void; onClose: () => void }) => {
+  const [selectedHour, setSelectedHour] = useState<number | null>(null)
+  const [selectedMinute, setSelectedMinute] = useState<number | null>(null)
+  const [isSelectingMinutes, setIsSelectingMinutes] = useState(false)
+
+  const hours = [9, 10, 11, 12, 13, 16, 17, 18, 19]
+  const minutes = [0, 15, 30, 45]
+
+  useEffect(() => {
+    if (value && value.includes(":")) {
+      const [hour, minute] = value.split(":").map(Number)
+      setSelectedHour(hour)
+      setSelectedMinute(minute)
+    }
+  }, [value])
+
+  const handleHourSelect = (hour: number) => {
+    setSelectedHour(hour)
+    setIsSelectingMinutes(true)
+  }
+
+  const handleMinuteSelect = (minute: number) => {
+    setSelectedMinute(minute)
+    if (selectedHour !== null) {
+      const timeString = `${selectedHour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`
+      onChange(timeString)
+      onClose()
+    }
+  }
+
+  const getHourPosition = (hour: number, index: number) => {
+    const angle = index * 40 - 90 // Distribuir las horas disponibles
+    const radius = 80
+    const x = Math.cos((angle * Math.PI) / 180) * radius
+    const y = Math.sin((angle * Math.PI) / 180) * radius
+    return { x: x + 100, y: y + 100 }
+  }
+
+  const getMinutePosition = (minute: number, index: number) => {
+    const angle = index * 90 - 90 // 4 posiciones para los minutos
+    const radius = 60
+    const x = Math.cos((angle * Math.PI) / 180) * radius
+    const y = Math.sin((angle * Math.PI) / 180) * radius
+    return { x: x + 100, y: y + 100 }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-6 shadow-xl">
+        <div className="text-center mb-4">
+          <h3 className="text-lg font-semibold text-gray-900">
+            {isSelectingMinutes ? "Seleccionar Minutos" : "Seleccionar Hora"}
+          </h3>
+          {selectedHour !== null && (
+            <p className="text-sm text-gray-600">
+              {isSelectingMinutes
+                ? `${selectedHour}:${selectedMinute !== null ? selectedMinute.toString().padStart(2, "0") : "__"}`
+                : `${selectedHour}:__`}
+            </p>
+          )}
+        </div>
+
+        <div className="relative w-48 h-48 mx-auto mb-4">
+          {/* Círculo del reloj */}
+          <div className="absolute inset-0 border-4 border-blue-200 rounded-full"></div>
+
+          {/* Centro del reloj */}
+          <div className="absolute top-1/2 left-1/2 w-3 h-3 bg-blue-600 rounded-full transform -translate-x-1/2 -translate-y-1/2 z-10"></div>
+
+          {!isSelectingMinutes
+            ? // Mostrar horas
+              hours.map((hour, index) => {
+                const position = getHourPosition(hour, index)
+                const isSelected = selectedHour === hour
+                return (
+                  <button
+                    key={hour}
+                    onClick={() => handleHourSelect(hour)}
+                    className={`absolute w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transform -translate-x-1/2 -translate-y-1/2 transition-all duration-200 ${
+                      isSelected
+                        ? "bg-blue-600 text-white scale-110"
+                        : "bg-blue-100 text-blue-800 hover:bg-blue-200 hover:scale-105"
+                    }`}
+                    style={{ left: position.x, top: position.y }}
+                  >
+                    {hour}
+                  </button>
+                )
+              })
+            : // Mostrar minutos
+              minutes.map((minute, index) => {
+                const position = getMinutePosition(minute, index)
+                const isSelected = selectedMinute === minute
+                return (
+                  <button
+                    key={minute}
+                    onClick={() => handleMinuteSelect(minute)}
+                    className={`absolute w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold transform -translate-x-1/2 -translate-y-1/2 transition-all duration-200 ${
+                      isSelected
+                        ? "bg-blue-600 text-white scale-110"
+                        : "bg-blue-100 text-blue-800 hover:bg-blue-200 hover:scale-105"
+                    }`}
+                    style={{ left: position.x, top: position.y }}
+                  >
+                    {minute.toString().padStart(2, "0")}
+                  </button>
+                )
+              })}
+        </div>
+
+        <div className="flex justify-center space-x-2">
+          {isSelectingMinutes && (
+            <Button variant="outline" onClick={() => setIsSelectingMinutes(false)} className="text-sm">
+              Volver a Horas
+            </Button>
+          )}
+          <Button variant="outline" onClick={onClose} className="text-sm">
+            Cancelar
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 type Cita = {
   id: string
   nombreCompleto: string
@@ -42,6 +172,8 @@ export default function AdminDashboard() {
     metodoPago: "",
     estado: "",
   })
+
+  const [showClockPicker, setShowClockPicker] = useState(false)
 
   const fetchCitas = async () => {
     try {
@@ -133,6 +265,38 @@ export default function AdminDashboard() {
     }))
   }
 
+  // Función para formatear la fecha correctamente
+  const formatDateForComparison = (dateString: string) => {
+    if (!dateString) return ""
+    const date = new Date(dateString + "T00:00:00")
+    return date.toISOString().split("T")[0]
+  }
+
+  // Función para formatear la hora con estilo de reloj
+  const formatTimeDisplay = (timeString: string) => {
+    if (!timeString) return ""
+
+    // Si la hora ya tiene formato HH:MM, la usamos directamente
+    if (timeString.includes(":")) {
+      const [hours, minutes] = timeString.split(":")
+      const hour24 = Number.parseInt(hours)
+      const hour12 = hour24 === 0 ? 12 : hour24 > 12 ? hour24 - 12 : hour24
+      const ampm = hour24 >= 12 ? "PM" : "AM"
+
+      return {
+        time: `${hour12.toString().padStart(2, "0")}:${minutes}`,
+        period: ampm,
+        hour24: timeString,
+      }
+    }
+
+    return {
+      time: timeString,
+      period: "",
+      hour24: timeString,
+    }
+  }
+
   useEffect(() => {
     fetchCitas()
   }, [])
@@ -148,14 +312,28 @@ export default function AdminDashboard() {
       )
     }
 
-    // Filtrar por fecha
+    // Filtrar por fecha - mejorado
     if (dateFilter) {
-      filtered = filtered.filter((cita) => cita.fecha === dateFilter)
+      filtered = filtered.filter((cita) => {
+        const citaDate = formatDateForComparison(cita.fecha)
+        return citaDate === dateFilter
+      })
     }
 
-    // Filtrar por hora
+    // Filtrar por hora - mejorado
     if (timeFilter) {
-      filtered = filtered.filter((cita) => cita.hora.startsWith(timeFilter))
+      filtered = filtered.filter((cita) => {
+        if (!cita.hora) return false
+
+        // Si la hora incluye ":", extraemos solo la hora
+        if (cita.hora.includes(":")) {
+          const citaHour = cita.hora.split(":")[0]
+          return citaHour === timeFilter
+        }
+
+        // Si no, comparamos directamente
+        return cita.hora.startsWith(timeFilter)
+      })
     }
 
     // Filtrar por estado
@@ -197,6 +375,19 @@ export default function AdminDashboard() {
   const metodosPago = ["efectivo", "tarjeta", "transferencia", "seguro"]
 
   const horasDisponibles = ["09:00", "10:00", "11:00", "12:00", "13:00", "16:00", "17:00", "18:00", "19:00"]
+
+  // Opciones para el filtro de hora
+  const opcionesHora = [
+    { value: "09", label: "9:00 AM" },
+    { value: "10", label: "10:00 AM" },
+    { value: "11", label: "11:00 AM" },
+    { value: "12", label: "12:00 PM" },
+    { value: "13", label: "1:00 PM" },
+    { value: "16", label: "4:00 PM" },
+    { value: "17", label: "5:00 PM" },
+    { value: "18", label: "6:00 PM" },
+    { value: "19", label: "7:00 PM" },
+  ]
 
   return (
     <section className="min-h-screen bg-blue-50 py-16 md:py-24">
@@ -261,15 +452,11 @@ export default function AdminDashboard() {
                   className="w-full pl-10 pr-4 py-3 border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent text-gray-700"
                 >
                   <option value="">Todas las horas</option>
-                  <option value="09">09:00 AM</option>
-                  <option value="10">10:00 AM</option>
-                  <option value="11">11:00 AM</option>
-                  <option value="12">12:00 PM</option>
-                  <option value="13">01:00 PM</option>
-                  <option value="16">04:00 PM</option>
-                  <option value="17">05:00 PM</option>
-                  <option value="18">06:00 PM</option>
-                  <option value="19">07:00 PM</option>
+                  {opcionesHora.map((opcion) => (
+                    <option key={opcion.value} value={opcion.value}>
+                      {opcion.label}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -318,83 +505,98 @@ export default function AdminDashboard() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {filteredCitas.map((cita) => (
-                  <tr key={cita.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 mr-3">
-                          <User className="h-5 w-5 text-blue-600" />
+                {filteredCitas.map((cita) => {
+                  const timeDisplay = formatTimeDisplay(cita.hora)
+                  return (
+                    <tr key={cita.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 mr-3">
+                            <User className="h-5 w-5 text-blue-600" />
+                          </div>
+                          <div>
+                            <div className="text-sm font-medium text-gray-900">{cita.nombreCompleto}</div>
+                          </div>
                         </div>
-                        <div>
-                          <div className="text-sm font-medium text-gray-900">{cita.nombreCompleto}</div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="space-y-1">
+                          <div className="flex items-center text-sm text-gray-600">
+                            <Phone className="h-4 w-4 mr-2 text-blue-600" />
+                            {cita.telefono}
+                          </div>
+                          <div className="flex items-center text-sm text-gray-600">
+                            <Mail className="h-4 w-4 mr-2 text-blue-600" />
+                            {cita.correo}
+                          </div>
                         </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="space-y-1">
-                        <div className="flex items-center text-sm text-gray-600">
-                          <Phone className="h-4 w-4 mr-2 text-blue-600" />
-                          {cita.telefono}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="space-y-2">
+                          <div className="flex items-center text-sm text-gray-900">
+                            <Calendar className="h-4 w-4 mr-2 text-blue-600" />
+                            {new Date(cita.fecha + "T00:00:00").toLocaleDateString("es-ES", {
+                              weekday: "short",
+                              year: "numeric",
+                              month: "short",
+                              day: "numeric",
+                            })}
+                          </div>
+                          <div className="flex items-center">
+                            <div className="flex items-center justify-center w-8 h-8 bg-blue-100 rounded-full mr-2">
+                              <Clock className="h-4 w-4 text-blue-600" />
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="text-sm font-semibold text-gray-900">{timeDisplay.time}</span>
+                              {timeDisplay.period && (
+                                <span className="text-xs text-blue-600 font-medium">{timeDisplay.period}</span>
+                              )}
+                            </div>
+                          </div>
                         </div>
-                        <div className="flex items-center text-sm text-gray-600">
-                          <Mail className="h-4 w-4 mr-2 text-blue-600" />
-                          {cita.correo}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="space-y-1">
-                        <div className="flex items-center text-sm text-gray-900">
-                          <Calendar className="h-4 w-4 mr-2 text-blue-600" />
-                          {new Date(cita.fecha).toLocaleDateString("es-ES")}
-                        </div>
-                        <div className="flex items-center text-sm text-gray-600">
-                          <Clock className="h-4 w-4 mr-2 text-blue-600" />
-                          {cita.hora}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-900">{cita.tratamiento}</td>
-                    <td className="px-6 py-4 text-sm text-gray-900 capitalize">{cita.metodoPago}</td>
-                    <td className="px-6 py-4">
-                      <span
-                        className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(cita.estado)}`}
-                      >
-                        {(cita.estado ?? "pendiente").charAt(0).toUpperCase() + (cita.estado ?? "pendiente").slice(1)}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex space-x-2">
-                        <button
-                          onClick={() => abrirModalEdicion(cita)}
-                          className="flex items-center text-blue-600 hover:text-blue-800 text-sm font-medium"
-                          title="Editar cita"
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-900">{cita.tratamiento}</td>
+                      <td className="px-6 py-4 text-sm text-gray-900 capitalize">{cita.metodoPago}</td>
+                      <td className="px-6 py-4">
+                        <span
+                          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(cita.estado)}`}
                         >
-                          <Edit className="h-4 w-4 mr-1" />
-                          Editar
-                        </button>
-                        {(cita.estado ?? "pendiente") !== "atendida" && (
+                          {(cita.estado ?? "pendiente").charAt(0).toUpperCase() + (cita.estado ?? "pendiente").slice(1)}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex space-x-2">
                           <button
-                            onClick={() => marcarAtendida(cita.id)}
-                            className="flex items-center text-green-600 hover:text-green-800 text-sm font-medium"
-                            title="Marcar como atendida"
+                            onClick={() => abrirModalEdicion(cita)}
+                            className="flex items-center text-blue-600 hover:text-blue-800 text-sm font-medium"
+                            title="Editar cita"
                           >
-                            <Check className="h-4 w-4 mr-1" />
-                            Atender
+                            <Edit className="h-4 w-4 mr-1" />
+                            Editar
                           </button>
-                        )}
-                        <button
-                          onClick={() => eliminarCita(cita.id)}
-                          className="flex items-center text-red-600 hover:text-red-800 text-sm font-medium"
-                          title="Eliminar cita"
-                        >
-                          <Trash2 className="h-4 w-4 mr-1" />
-                          Eliminar
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                          {(cita.estado ?? "pendiente") !== "atendida" && (
+                            <button
+                              onClick={() => marcarAtendida(cita.id)}
+                              className="flex items-center text-green-600 hover:text-green-800 text-sm font-medium"
+                              title="Marcar como atendida"
+                            >
+                              <Check className="h-4 w-4 mr-1" />
+                              Atender
+                            </button>
+                          )}
+                          <button
+                            onClick={() => eliminarCita(cita.id)}
+                            className="flex items-center text-red-600 hover:text-red-800 text-sm font-medium"
+                            title="Eliminar cita"
+                          >
+                            <Trash2 className="h-4 w-4 mr-1" />
+                            Eliminar
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
@@ -479,18 +681,16 @@ export default function AdminDashboard() {
 
                   <div className="grid gap-2">
                     <Label htmlFor="edit-hora">Hora</Label>
-                    <Select value={editForm.hora} onValueChange={(value) => handleInputChange("hora", value)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Seleccionar hora" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {horasDisponibles.map((hora) => (
-                          <SelectItem key={hora} value={hora}>
-                            {hora}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <div className="relative">
+                      <Button
+                        variant="outline"
+                        onClick={() => setShowClockPicker(true)}
+                        className="w-full justify-start text-left font-normal"
+                      >
+                        <Clock className="mr-2 h-4 w-4" />
+                        {editForm.hora || "Seleccionar hora"}
+                      </Button>
+                    </div>
                   </div>
                 </div>
 
@@ -563,6 +763,16 @@ export default function AdminDashboard() {
                 Guardar Cambios
               </Button>
             </div>
+            {showClockPicker && (
+              <ClockPicker
+                value={editForm.hora}
+                onChange={(time) => {
+                  handleInputChange("hora", time)
+                  setShowClockPicker(false)
+                }}
+                onClose={() => setShowClockPicker(false)}
+              />
+            )}
           </DialogContent>
         </Dialog>
       </div>
